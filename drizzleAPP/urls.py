@@ -6,5 +6,6 @@ from drizzleAPP import views
 router = routers.DefaultRouter()
 
 urlpatterns = [
-    path('all_weather/', views.DrizzleApiView.as_view(), name='Список всех погодных условий'),
+    path('full_city/', views.FullCity.as_view(), name='full_city'),
+    path('one_coordinate/', views.OneCoordinate.as_view(), name='one_coordinate'),
 ]
