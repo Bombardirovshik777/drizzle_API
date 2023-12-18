@@ -6,6 +6,16 @@ from rest_framework.views import APIView
 from drizzleAPP import models, serializers
 
 
+cache = models.LeaderDrizzle.objects.all()
+
+
+def update_cache():
+    global cache
+    while True:
+        print('updating cache...')
+        cache = models.LeaderDrizzle.objects.all()
+        sleep(2)
+
 # Create your views here.
 class DrizzleApiView(APIView):
 
