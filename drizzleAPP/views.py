@@ -10,8 +10,8 @@ from drizzleAPP import models, serializers
 class DrizzleApiView(APIView):
 
     def get(self, request, *args, **kwargs):
-        todos = models.Drizzle.objects.filter(city=request.GET.get('city', None))
-        serializer = serializers.DrizzleSerializers(todos, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        weather_data = models.LeaderDrizzle.objects.filter(city=request.GET.get('city', None))
+        # serializer = serializers.DrizzleSerializers(todos, many=True)
+        return Response({}, status=status.HTTP_200_OK)
 
 

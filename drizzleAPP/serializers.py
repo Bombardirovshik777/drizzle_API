@@ -4,6 +4,6 @@ from . import models
 
 class DrizzleSerializers(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = models.Drizzle
-        fields = ('temperature', 'city')
+        model = models.LeaderDrizzle
+        fields = ('__all__',)
 
