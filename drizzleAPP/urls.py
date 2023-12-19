@@ -8,4 +8,5 @@ router = routers.DefaultRouter()
 urlpatterns = [
     path('full_city/', views.FullCity.as_view(), name='full_city'),
     path('one_coordinate/', views.OneCoordinate.as_view(), name='one_coordinate'),
+    path('group_coordinate/', views.GroupCoordinate.as_view(), name='group_coordinate'),
 ]
