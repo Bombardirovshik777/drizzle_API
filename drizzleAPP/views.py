@@ -66,7 +66,7 @@ class OneCoordinate(APIView):
         print(request.GET)
         raw = weather_data.first()
         if raw is None:
-            return Response({'ERROR': 'coord none'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'ERROR': 'no such coordinates'}, status=status.HTTP_400_BAD_REQUEST)
         current_weather = {}
         if raw.precip_type != 0 and raw.precip_type is not None:
             current_weather['pt'] = raw.precip_type
@@ -97,16 +97,22 @@ class GroupCoordinate(APIView):
        }
         for coord in params['coordinates']:
             if 'lat' not in coord.keys() or 'lon' not in coord.keys():
-                result['errors'].append(coord)
+                result['errors'].append({'message': 'you must pass lat and lon keys',
+                                         'data': coord})
             else:
-                lat = coord['lat'].replace('.', '')
-                lon = coord['lon'].replace('.', '')
+                lat = str(coord['lat']).replace('.', '')
+                lon = str(coord['lon']).replace('.', '')
                 try:
                     weather_data = cache.filter(lat=lat, lon=lon)
-                except ValueError: return Response({'ERROR' : 'coordinate must be numbers'}, status=status.HTTP_400_BAD_REQUEST)
+                except ValueError:
+                    result['errors'].append({'message': 'coordinate must be numbers',
+                                             'data': coord})
+                    continue
                 raw = weather_data.first()
                 if raw is None:
-                    return Response({'ERROR': 'coord none'}, status=status.HTTP_400_BAD_REQUEST)
+                    result['errors'].append({'message': 'no such coordinates',
+                                             'data': coord})
+                    continue
                 current_weather = {}
                 if raw.precip_type != 0 and raw.precip_type is not None:
                     current_weather['pt'] = raw.precip_type
