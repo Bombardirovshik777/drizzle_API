@@ -282,3 +282,17 @@ class YadResponseCurrent(models.Model):
     class Meta:
         managed = False
         db_table = 'yad_response_current'
+
+
+
+class WeatherPhenomenaTable(models.Model):
+    code = models.IntegerField(null=False, unique=True, verbose_name='weather_phenomena_code', help_text='777')
+    description = models.CharField(max_length=250)
+    abbreviation = models.CharField(max_length=250)
+    text = models.CharField(max_length=250)
+
+    class Meta:
+        db_table = 'weather_phenomena_sum'
+
+    def __str__(self):
+        return f'{self.code} {self.description}'

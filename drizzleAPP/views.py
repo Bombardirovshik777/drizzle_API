@@ -10,8 +10,16 @@ from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from drizzleAPP import models, serializers
+
+def beautify_coordinate(degree: str):
+    if degree.find('.') == -1: return None
+    degree_precicion = degree[degree.find('.') + 1:]
+
+    if len(degree_precicion) < 6: degree_precicion += '0' * (6 -len(degree_precicion))
+    elif len(degree_precicion) > 6: degree_precicion = degree_precicion[: -(len(degree_precicion) - 6)]
+
+    return degree[: degree.find('.')] + degree_precicion
 
 
 # http://127.0.0.1:8000/whole_city_trunc/?city=spb
@@ -364,7 +372,7 @@ class OneCoordinateFull(APIView):
         current_weather = {"pt": leader_data.precip_type, "st": leader_data.sub_type, "i": leader_data.intensity,
                            "pa1": leader_data.prec_accum1, "pa3": leader_data.prec_accum3, "pa7": leader_data.prec_accum7,
                            "pp": leader_data.precip_prob, "wf": leader_data.weather_phenomena, "t": leader_data.temp,
-                           "fl": leader_data.feels_like, "dp": leader_data.dew_point,"tmin": leader_data.temp_min,
+                           "fl": leader_data.feels_like, "dp": leader_data.dew_point, "tmin": leader_data.temp_min,
                            "tmax": leader_data.temp_max, "c": leader_data.cloudnes}
         result['current_and_forecast'].append([
             leader_data.lat,
@@ -437,6 +445,7 @@ class OneCoordinateFull_exp_new(APIView):
         leader_data = weather_data.first()
         if leader_data is None:
             return Response({'ERROR': 'no such coordinates'}, status=status.HTTP_400_BAD_REQUEST)
+        weather_phenomena_info = models.WeatherPhenomenaTable.objects.filter(code=leader_data.weather_phenomena).first()
         current_weather = {"precipitation": {"precip_type": leader_data.precip_type,
                                              "sub_type": leader_data.sub_type,
                                              "intensity": leader_data.intensity,
@@ -446,7 +455,7 @@ class OneCoordinateFull_exp_new(APIView):
                                              "precip_prob": leader_data.precip_prob
                                              },
                            "phenomena": {
-                               "weather_phenomena": leader_data.weather_phenomena,
+                               "weather_phenomena": leader_data.weather_phenomena
                            },
                            "main": {
                                "temperature": leader_data.temp,
@@ -459,6 +468,9 @@ class OneCoordinateFull_exp_new(APIView):
                                "cloudnes": leader_data.cloudnes
                            }
                            }
+        if weather_phenomena_info: current_weather['phenomena'].update({"description": weather_phenomena_info.description,
+                                                                        "abbreviation": weather_phenomena_info.abbreviation,
+                                                                        "text": weather_phenomena_info.text})
         result['current_and_forecast'].append([
             leader_data.lat,
             leader_data.lon,
@@ -493,8 +505,13 @@ class GroupCoordinateTrunc(APIView):
                 result['errors'].append({'message': 'you must pass lat and lon keys',
                                          'data': coord})
             else:
-                lat = str(coord['lat']).replace('.', '')
-                lon = str(coord['lon']).replace('.', '')
+                lat = beautify_coordinate(str(coord['lat']))
+                lon = beautify_coordinate(str(coord['lon']))
+
+                if lat is None or lon is None:
+                    result['errors'].append({'message': 'you must pass lat and lon keys with point(example: 56.876543)',
+                                             'data': coord})
+                    continue
                 try:
                     weather_data = cache.filter(lat=lat, lon=lon)
                 except ValueError:
@@ -527,8 +544,8 @@ class GroupCoordinateTrunc(APIView):
                     current_weather['s'] = leader_data.cloudnes
                 result['current_and_forecast'].append(
                     [
-                    leader_data.lat,
-                    leader_data.lon,
+                    coord['lat'],
+                    coord['lon'],
                     [
                         current_weather,
                         {'forecast'},
@@ -552,8 +569,25 @@ class GroupCoordinateFull(APIView):
                 result['errors'].append({'message': 'you must pass lat and lon keys',
                                          'data': coord})
             else:
-                lat = str(coord['lat']).replace('.', '')
-                lon = str(coord['lon']).replace('.', '')
+                lat = str(coord['lat'])
+                lon = str(coord['lon'])
+                if lat.find('.') == -1:
+                    result['errors'].append({'message': 'you must pass lat and lon keys with point(example: 56.876543)',
+                                             'data': coord})
+                    continue
+                if lon.find('.') == -1:
+                    result['errors'].append({'message': 'you must pass lat and lon keys with point(example: 56.876543)',
+                                             'data': coord})
+                    continue
+                lat_precicion = lat[lat.find('.') + 1:]
+                lon_precicion = lon[lon.find('.') + 1:]
+                # lat_precicion = lat.split('.')[1]
+                if len(lat_precicion) < 6: lat_precicion += '0' * (6 -len(lat_precicion))
+                elif len(lat_precicion) > 6: lat_precicion = lat_precicion[: -(len(lat_precicion) - 6)]
+                if len(lon_precicion) < 6: lon_precicion += '0' * (6 -len(lon_precicion))
+                elif len(lon_precicion) > 6: lon_precicion = lon_precicion[: -(len(lon_precicion) - 6)]
+                lat = lat[: lat.find('.')] + lat_precicion
+                lon = lon[: lon.find('.')] + lon_precicion
                 try:
                     weather_data = cache.filter(lat=lat, lon=lon)
                 except ValueError:
@@ -565,29 +599,15 @@ class GroupCoordinateFull(APIView):
                     result['errors'].append({'message': 'no such coordinates',
                                              'data': coord})
                     continue
-                current_weather = {"t": leader_data.temp, "fl": leader_data.feels_like, "dp": leader_data.dew_point}
-                if leader_data.precip_type != 0 and leader_data.precip_type is not None:
-                    current_weather['pt'] = leader_data.precip_type
-                if leader_data.sub_type != 0 and leader_data.sub_type is not None:
-                    current_weather['st'] = leader_data.sub_type
-                if leader_data.intensity != 0 and leader_data.intensity is not None:
-                    current_weather['i'] = leader_data.intensity
-                if leader_data.prec_accum1 != 0 and leader_data.prec_accum1 is not None:
-                    current_weather['pa1'] = leader_data.prec_accum1
-                if leader_data.prec_accum3 != 0 and leader_data.prec_accum3 is not None:
-                    current_weather['pa3'] = leader_data.prec_accum3
-                if leader_data.prec_accum7 != 0 and leader_data.prec_accum7 is not None:
-                    current_weather['pa7'] = leader_data.prec_accum7
-                if leader_data.precip_prob != 0 and leader_data.precip_prob is not None:
-                    current_weather['pp'] = leader_data.precip_prob
-                if leader_data.weather_phenomena != 0 and leader_data.weather_phenomena is not None:
-                    current_weather['wf'] = leader_data.weather_phenomena
-                if leader_data.cloudnes != 0 and leader_data.cloudnes is not None:
-                    current_weather['s'] = leader_data.cloudnes
+                current_weather = {"pt": leader_data.precip_type, "st": leader_data.sub_type, "i": leader_data.intensity,
+                                   "pa1": leader_data.prec_accum1, "pa3": leader_data.prec_accum3, "pa7": leader_data.prec_accum7,
+                                   "pp": leader_data.precip_prob, "wf": leader_data.weather_phenomena, "t": leader_data.temp,
+                                   "fl": leader_data.feels_like, "dp": leader_data.dew_point, "tmin": leader_data.temp_min,
+                                   "tmax": leader_data.temp_max, "c": leader_data.cloudnes}
                 result['current_and_forecast'].append(
                     [
-                        leader_data.lat,
-                        leader_data.lon,
+                        coord['lat'],
+                        coord['lon'],
                         [
                             current_weather,
                             {'forecast'},
@@ -596,7 +616,6 @@ class GroupCoordinateFull(APIView):
                     ]
                 )
         return Response(result, status=status.HTTP_200_OK)
-
 
 
 
