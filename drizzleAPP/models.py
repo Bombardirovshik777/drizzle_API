@@ -284,7 +284,6 @@ class YadResponseCurrent(models.Model):
         db_table = 'yad_response_current'
 
 
-
 class WeatherPhenomenaTable(models.Model):
     code = models.IntegerField(null=False, unique=True, verbose_name='weather_phenomena_code', help_text='777')
     description = models.CharField(max_length=250)
